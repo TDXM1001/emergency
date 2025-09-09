@@ -1,6 +1,23 @@
+/**
+ * @fileoverview 应急调度系统模拟数据
+ * @description 提供开发和测试使用的模拟数据，包括事件和资源数据
+ * @author Emergency Dispatch Development Team
+ * @date 2024-01-15
+ * @version 1.0.0
+ * 
+ * @contents
+ * - 模拟应急事件数据
+ * - 模拟应急资源数据
+ * - 随机数据生成函数
+ * - 数据更新工具函数
+ */
+
 import type { EmergencyEvent, EmergencyResource } from '@/types/emergency'
 
-// 模拟事件数据
+/**
+ * 模拟事件数据集合
+ * @description 包含不同类型和严重程度的应急事件示例
+ */
 export const mockEvents: EmergencyEvent[] = [
   {
     id: '1',

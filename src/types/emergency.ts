@@ -1,30 +1,69 @@
-// 应急调度系统类型定义
+/**
+ * @fileoverview 应急调度系统类型定义
+ * @description 定义应急调度系统中使用的所有数据类型和接口
+ * @author Emergency Dispatch Development Team
+ * @date 2024-01-15
+ * @version 1.0.0
+ * 
+ * @contents
+ * - 基础枚举类型（严重程度、状态、类型等）
+ * - 核心数据接口（事件、资源、地图标注等）
+ * - 统计和配置接口
+ * - API响应格式
+ * - 实时通信接口
+ */
 
-// 事件严重程度
+/**
+ * 事件严重程度枚举
+ * @description 定义应急事件的严重程度级别
+ */
 export type EventSeverity = 'low' | 'medium' | 'high' | 'critical'
 
-// 事件状态
+/**
+ * 事件状态枚举
+ * @description 定义应急事件的处理状态
+ */
 export type EventStatus = 'pending' | 'processing' | 'resolved' | 'closed'
 
-// 事件类型
+/**
+ * 事件类型枚举
+ * @description 定义应急事件的分类类型
+ */
 export type EventType = 'fire' | 'accident' | 'medical' | 'natural_disaster' | 'security' | 'equipment_failure' | 'other'
 
-// 资源状态
+/**
+ * 资源状态枚举
+ * @description 定义应急资源的工作状态
+ */
 export type ResourceStatus = 'available' | 'busy' | 'offline' | 'maintenance'
 
-// 资源类型
+/**
+ * 资源类型枚举
+ * @description 定义应急资源的分类类型
+ */
 export type ResourceType = 'personnel' | 'vehicle' | 'equipment' | 'facility'
 
-// 地理位置信息
+/**
+ * 地理位置信息接口
+ * @description 定义地理坐标和地址信息
+ */
 export interface Location {
+  /** 纬度 */
   lat: number
+  /** 经度 */
   lng: number
+  /** 详细地址 */
   address: string
+  /** 所属区县 */
   district?: string
+  /** 所属城市 */
   city?: string
 }
 
-// 应急事件接口
+/**
+ * 应急事件接口
+ * @description 定义应急事件的完整数据结构
+ */
 export interface EmergencyEvent {
   id: string
   type: EventType

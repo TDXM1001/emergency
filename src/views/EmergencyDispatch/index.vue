@@ -63,20 +63,21 @@
 
       <!-- 中央地图区域 -->
       <section class="map-container">
-        <div class="map-header">
-          <h3>实时态势图</h3>
-          <div class="map-controls">
-            <el-button-group>
-              <el-button :type="mapView === 'normal' ? 'primary' : 'default'" @click="switchMapView('normal')">
-                标准
-              </el-button>
-              <el-button :type="mapView === 'satellite' ? 'primary' : 'default'" @click="switchMapView('satellite')">
-                卫星
-              </el-button>
-            </el-button-group>
-          </div>
-        </div>
-        <div id="amap-container" class="map-content"></div>
+        <MapContainer
+          ref="mapContainerRef"
+          :events="recentEvents"
+          :resources="availableResources"
+          :center="mapCenter"
+          :zoom="mapZoom"
+          :show-legend="true"
+          :show-stats="true"
+          :auto-fit="false"
+          @map-ready="handleMapReady"
+          @marker-click="handleMarkerClick"
+          @map-click="handleMapClick"
+          @zoom-change="handleZoomChange"
+          @center-change="handleCenterChange"
+        />
       </section>
 
       <!-- 右侧面板 -->
@@ -120,51 +121,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { Monitor, Bell, VideoCamera, Message, Connection } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import MapContainer from '@/components/EmergencyDispatch/MapContainer.vue'
+import { useEmergencyStore } from '@/stores/modules/emergency'
+import { useMapStore } from '@/stores/modules/map'
+import { mockEvents, mockResources } from '@/assets/mock/emergency'
+import type { AMapInstance } from '@/utils/mapUtils'
+import type { EmergencyEvent, EmergencyResource } from '@/types/emergency'
+
+// 状态管理
+const emergencyStore = useEmergencyStore()
+const mapStore = useMapStore()
 
 // 响应式数据
 const currentTime = ref('')
 const alertCount = ref(3)
-const mapView = ref('normal')
+const mapContainerRef = ref<InstanceType<typeof MapContainer>>()
 
-// 事件统计数据
-const eventStats = ref({
-  total: 24,
-  critical: 3,
-  processing: 8
-})
+// 地图配置
+const mapCenter = ref<[number, number]>([116.397428, 39.90923])
+const mapZoom = ref(11)
 
-// 资源统计数据
-const resourceStats = ref({
-  available: 75,
-  busy: 25
-})
-
-// 最近事件列表
-const recentEvents = ref([
-  {
-    id: '1',
-    title: '火灾报警',
-    severity: 'critical',
-    location: { address: '朝阳区建国路88号' },
-    createdAt: new Date(Date.now() - 5 * 60 * 1000)
-  },
-  {
-    id: '2',
-    title: '交通事故',
-    severity: 'high',
-    location: { address: '海淀区中关村大街' },
-    createdAt: new Date(Date.now() - 15 * 60 * 1000)
-  },
-  {
-    id: '3',
-    title: '设备故障',
-    severity: 'medium',
-    location: { address: '西城区西单北大街' },
-    createdAt: new Date(Date.now() - 30 * 60 * 1000)
-  }
-])
+// 计算属性
+const eventStats = computed(() => emergencyStore.eventStats)
+const resourceStats = computed(() => emergencyStore.resourceStats)
+const recentEvents = computed(() => emergencyStore.recentEvents)
+const availableResources = computed(() => emergencyStore.availableResources)
 
 // 时间更新定时器
 let timeInterval: NodeJS.Timeout
@@ -182,10 +166,38 @@ const updateTime = () => {
   })
 }
 
-// 切换地图视图
-const switchMapView = (view: string) => {
-  mapView.value = view
-  // TODO: 实际切换地图图层
+// 地图事件处理
+const handleMapReady = (mapInstance: AMapInstance) => {
+  console.log('地图初始化完成')
+  mapStore.setMapInstance(mapInstance)
+  ElMessage.success('地图加载完成')
+}
+
+const handleMarkerClick = (data: EmergencyEvent | EmergencyResource, type: 'event' | 'resource') => {
+  console.log('标注点击:', type, data)
+  
+  if (type === 'event') {
+    emergencyStore.setCurrentEvent(data as EmergencyEvent)
+    ElMessage.info(`选中事件: ${data.title || (data as EmergencyEvent).title}`)
+  } else {
+    emergencyStore.setCurrentResource(data as EmergencyResource)
+    ElMessage.info(`选中资源: ${(data as EmergencyResource).name}`)
+  }
+}
+
+const handleMapClick = (position: [number, number]) => {
+  console.log('地图点击位置:', position)
+  // 可以在此处添加新事件或资源的逻辑
+}
+
+const handleZoomChange = (zoom: number) => {
+  mapZoom.value = zoom
+  mapStore.updateConfig({ zoom })
+}
+
+const handleCenterChange = (center: [number, number]) => {
+  mapCenter.value = center
+  mapStore.updateConfig({ center })
 }
 
 // 格式化时间
@@ -196,17 +208,20 @@ const formatTime = (date: Date) => {
   })
 }
 
-// 初始化地图
-const initMap = () => {
-  // TODO: 初始化高德地图
-  console.log('地图初始化')
+// 初始化数据
+const initData = () => {
+  // 加载模拟数据
+  emergencyStore.setEvents(mockEvents)
+  emergencyStore.setResources(mockResources)
+  
+  console.log('数据初始化完成')
 }
 
 // 组件挂载
 onMounted(() => {
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
-  initMap()
+  initData()
 })
 
 // 组件卸载
@@ -366,40 +381,14 @@ onUnmounted(() => {
 }
 
 .map-container {
-  flex: 1;
-  background: rgba(26, 31, 58, 0.6);
-  backdrop-filter: blur(10px);
-  border: 1px solid #2c5aa0;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-
-  .map-header {
-    height: 50px;
-    background: rgba(44, 90, 160, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    border-bottom: 1px solid #2c5aa0;
-
-    h3 {
-      font-size: 16px;
-      color: #409eff;
-      margin: 0;
-    }
+    flex: 1;
+    background: rgba(26, 31, 58, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid #2c5aa0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   }
-
-  .map-content {
-    height: calc(100% - 50px);
-    background: #1a1f3a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #909399;
-    font-size: 16px;
-  }
-}
 
 .event-list {
   max-height: 300px;
